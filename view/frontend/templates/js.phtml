@@ -13,21 +13,50 @@
  * Do not edit or add to this file if you wish to upgrade this extension to newer
  * version in the future.
  *
- * @category    Mageplaza
- * @package     Mageplaza_LazyLoading
- * @copyright   Copyright (c) Mageplaza (https://www.mageplaza.com/)
- * @license     https://www.mageplaza.com/LICENSE.txt
+ * @category    Fidesio
+ * @package     Fidesio
+ * @author      An Huy
+ * @email       huy.nguyen@fidesio.com
  */
 ?>
 <script>
-    require([
-        'jquery'
-    ], function ($) {
-        $(document).ready(function () {
+    if (!!window.IntersectionObserver) {
+        let imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.src = entry.target.dataset.src;
+                    observer.unobserve(entry.target);
+                    entry.target.classList.remove('mplazyload-blur');
+                    entry.target.classList.remove('mplazyload-icon');
+                    entry.target.classList.remove('mplazyload-cms');
+                }
+            });
+        }, {
+            root: document.querySelector('.page-wrapper'),
+            rootMargin: "0px",
+            threshold: 1.0,
+        });
+        document.querySelectorAll('img.mplazyload').forEach((img) => {
+            imageObserver.observe(img);
+        });
+
+        require(['jquery'], function ($) {
+            $(document).ajaxComplete(function (event, xhr, settings) {
+                if (settings.url.indexOf("shopbyAjax=1") > 0) {
+                    document.querySelectorAll('img.mplazyload').forEach((img) => {
+                        imageObserver.observe(img);
+                    });
+                }
+            });
+        });
+    } else {
+        require([
+            'jquery',
+            'lazyLoading',
+            'domReady!'
+        ], function ($) {
             $('.mplazyload').lazy({
                 threshold: <?= /** @noEscape */ $block->getThreshold() ?>,
-                effect: "fadeIn",
-                effectTime: 1000,
                 afterLoad: function (e) {
                     e.removeClass('mplazyload-blur');
                     e.removeClass('mplazyload-icon');
@@ -35,17 +64,14 @@
                 }
             });
         });
-    });
+    }
+
 </script>
 
 <style>
     img.mplazyload-icon {
-        width: <?= /** @noEscape */ $block->getResizeWith() . 'px' ?>;
-        height: <?= /** @noEscape */ $block->getResizeHeight() . 'px' ?>;
-    }
-
-    img.mplazyload-cms {
-        padding-left: 45%;
+        width: <?= /** @noEscape */ $block->getResizeWith() . 'px' ?> !important;
+        height: <?= /** @noEscape */ $block->getResizeHeight() . 'px' ?> !important;
     }
 
     img.mplazyload-blur {
