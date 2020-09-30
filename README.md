@@ -34,7 +34,8 @@ A: Threshold is used to make the images load easier. You can use the threshold p
 Install via composer (recommend). Run the following command in Magento 2 root folder:
 
 ```
-composer require mageplaza/module-lazy-loading
+composer config repositories.magento2-lazy-loading git "https://github.com/anhuy1989/magento-2-lazy-loading"
+composer require fidesio/module-lazy-loading
 php bin/magento setup:upgrade
 php bin/magento setup:static-content:deploy
 ```
