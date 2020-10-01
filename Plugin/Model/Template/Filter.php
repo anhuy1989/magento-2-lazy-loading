@@ -28,6 +28,8 @@ use Mageplaza\LazyLoading\Helper\Data as HelperData;
 use Mageplaza\LazyLoading\Helper\Image as HelperImage;
 use Mageplaza\LazyLoading\Model\Config\Source\System\LoadingType;
 use Mageplaza\LazyLoading\Model\Config\Source\System\PlaceholderType;
+use Magento\Framework\Filesystem\DirectoryList;
+use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * Class Filter
@@ -52,25 +54,36 @@ class Filter
     protected $file;
 
     /**
+     * @var DirectoryList
+     */
+    protected $directory;
+
+    protected $storeManager;
+
+    /**
      * @var string
      */
-    protected $moveImgTo = 'pub/media/mageplaza/lazyloading/';
+    protected $moveImgTo = 'media/mageplaza/lazyloading/';
 
     /**
      * Filter constructor.
-     *
      * @param HelperData $helperData
      * @param HelperImage $helperImage
      * @param File $file
+     * @param DirectoryList $directory
      */
     public function __construct(
         HelperData $helperData,
         HelperImage $helperImage,
-        File $file
+        File $file,
+        DirectoryList $directory,
+        StoreManagerInterface $storeManager
     ) {
         $this->helperData  = $helperData;
         $this->helperImage = $helperImage;
         $this->file        = $file;
+        $this->directory   = $directory;
+        $this->storeManager = $storeManager;
     }
 
     /**
@@ -105,12 +118,14 @@ class Filter
         preg_match_all('/<img.*?src="(.*?)"[^\>]+>/', $result, $matches);
         $replaced = [];
         $search   = [];
-
+        $store = $this->storeManager->getStore();
+        $baseUrl = $store->getBaseUrl();
         foreach ($matches[0] as $img) {
             if ($img && !$this->helperData->isExcludeText($this->getImageText($img))) {
                 if ($holderType !== PlaceholderType::TRANSPARENT && $loadingType === LoadingType::PLACEHOLDER) {
                     $imgSrc  = $this->getImageSrc($img);
-                    $imgPath = substr($imgSrc, strpos($imgSrc, 'pub'));
+                    $imgPath = str_replace($baseUrl, '', $imgSrc);
+
                     $imgInfo = $this->file->getPathInfo($imgPath);
                     $this->optimizeImage($this->filterSrc($imgPath), $imgInfo);
                     $placeHolder = $this->helperImage->getBaseMediaUrl()
@@ -215,14 +230,20 @@ class Filter
     public function optimizeImage($imgPath, $imgInfo)
     {
         $quality = 10;
+        try {
+            if ($dir = opendir($this->filterSrc($imgInfo['dirname']))) {
+                $checkValidImage = getimagesize($imgPath);
 
-        if ($dir = opendir($this->filterSrc($imgInfo['dirname']))) {
-            $checkValidImage = getimagesize($imgPath);
-
-            if ($checkValidImage) {
-                $this->changeQuality($imgPath, $this->moveImgTo . $imgInfo['basename'], $quality);
+                $moveImgTo = $this->moveImgTo;
+                if ($this->directory->getUrlPath('pub') == 'pub') {
+                    $moveImgTo = 'pub/' . $moveImgTo;
+                }
+                if ($checkValidImage) {
+                    $this->changeQuality($imgPath, $moveImgTo . $imgInfo['basename'], $quality);
+                }
+                closedir($dir);
             }
-            closedir($dir);
+        } catch (\Exception $e) {
         }
     }
 
