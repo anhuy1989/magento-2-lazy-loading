@@ -19,36 +19,32 @@
  * @email       huy.nguyen@fidesio.com
  */
 ?>
+<?php
+$dataHelper = $this->helper('Mageplaza\LazyLoading\Helper\Data');
+$loadingIcon = $dataHelper->getIcon();
+?>
 <script>
-    if (!!window.IntersectionObserver) {
-        let imageObserver = new IntersectionObserver((entries, observer) => {
+    if (!!window.IntersectionObserver && !!window.MutationObserver ) {
+        window.imageObserver = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.src = entry.target.dataset.src;
+                if (entry.isIntersecting && entry.target.dataset.src) {
+                    const e = entry.target;
+                    e.src = e.dataset.src;
                     observer.unobserve(entry.target);
-                    entry.target.classList.remove('mplazyload-blur');
-                    entry.target.classList.remove('mplazyload-icon');
-                    entry.target.classList.remove('mplazyload-cms');
+                    e.classList.remove('mplazyload-blur');
+                    e.classList.remove('mplazyload-icon');
+                    e.classList.remove('mplazyload-cms');
                 }
             });
         }, {
             root: document.querySelector('.page-wrapper'),
-            rootMargin: "0px",
-            threshold: 1.0,
+            rootMargin: "0px 0px 500px 0px",
+            threshold: 0,
         });
         document.querySelectorAll('img.mplazyload').forEach((img) => {
-            imageObserver.observe(img);
+            window.imageObserver.observe(img);
         });
 
-        require(['jquery'], function ($) {
-            $(document).ajaxComplete(function (event, xhr, settings) {
-                if (settings.url.indexOf("shopbyAjax=1") > 0) {
-                    document.querySelectorAll('img.mplazyload').forEach((img) => {
-                        imageObserver.observe(img);
-                    });
-                }
-            });
-        });
     } else {
         require([
             'jquery',
@@ -57,12 +53,15 @@
         ], function ($) {
             $('.mplazyload').lazy({
                 threshold: <?= /** @noEscape */ $block->getThreshold() ?>,
+                effect: "fadeIn",
+                effectTime: 1000,
                 afterLoad: function (e) {
                     e.removeClass('mplazyload-blur');
                     e.removeClass('mplazyload-icon');
                     e.removeClass('mplazyload-cms');
                 }
             });
+
         });
     }
 
@@ -70,8 +69,12 @@
 
 <style>
     img.mplazyload-icon {
-        width: <?= /** @noEscape */ $block->getResizeWith() . 'px' ?> !important;
-        height: <?= /** @noEscape */ $block->getResizeHeight() . 'px' ?> !important;
+        display: block;
+        background-repeat: no-repeat;
+        background-position: 50% 50%;
+        background-image: url('<?= $loadingIcon ?>');
+        min-width: <?= /** @noEscape */ $block->getResizeWith() . 'px' ?>;
+        min-height: <?= /** @noEscape */ $block->getResizeHeight() . 'px' ?>;
     }
 
     img.mplazyload-blur {

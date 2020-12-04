@@ -23,13 +23,13 @@ namespace Mageplaza\LazyLoading\Plugin\Model\Template;
 
 use Magento\Cms\Model\Template\Filter as CmsFilter;
 use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Framework\Filesystem\DirectoryList;
 use Magento\Framework\Filesystem\Io\File;
+use Magento\Store\Model\StoreManagerInterface;
 use Mageplaza\LazyLoading\Helper\Data as HelperData;
 use Mageplaza\LazyLoading\Helper\Image as HelperImage;
 use Mageplaza\LazyLoading\Model\Config\Source\System\LoadingType;
 use Mageplaza\LazyLoading\Model\Config\Source\System\PlaceholderType;
-use Magento\Framework\Filesystem\DirectoryList;
-use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * Class Filter
@@ -64,6 +64,9 @@ class Filter
      * @var string
      */
     protected $moveImgTo = 'media/mageplaza/lazyloading/';
+
+    const MIN_WIDTH = 60;
+    const MIN_HEIGHT = 60;
 
     /**
      * Filter constructor.
@@ -106,7 +109,7 @@ class Filter
 
         if ($loadingType === LoadingType::ICON) {
             $class       = 'mplazyload mplazyload-icon mplazyload-cms';
-            $placeHolder = $this->helperData->getIcon();
+            $placeHolder = HelperData::DEFAULT_IMAGE;
         } else {
             $holderType = $this->helperData->getPlaceholderType();
             $class      = 'mplazyload mplazyload-' . $this->helperData->getPlaceholderType();
@@ -115,19 +118,30 @@ class Filter
             }
         }
 
-        preg_match_all('/<img.*?src="(.*?)"[^\>]+>/', $result, $matches);
+        preg_match_all('/<img.*?src="(.*?)"[^\>]*+>/', $result, $matches);
         $replaced = [];
         $search   = [];
         $store = $this->storeManager->getStore();
         $baseUrl = $store->getBaseUrl();
         foreach ($matches[0] as $img) {
+            $imgSrc  = $this->getImageSrc($img);
+            $imgPath = str_replace($baseUrl, '', $imgSrc);
+            $imgAbsPath = $this->filterSrc($this->directory->getPath('pub') . '/' . $imgPath);
+
+            if ($this->file->fileExists($imgAbsPath)) {
+                $sizeInfo = getimagesize($imgSrc);
+                if ($sizeInfo[0] < self::MIN_WIDTH && $sizeInfo[1] < self::MIN_HEIGHT) {
+                    continue;
+                }
+            }
+
             if ($img && !$this->helperData->isExcludeText($this->getImageText($img))) {
                 if ($holderType !== PlaceholderType::TRANSPARENT && $loadingType === LoadingType::PLACEHOLDER) {
-                    $imgSrc  = $this->getImageSrc($img);
-                    $imgPath = str_replace($baseUrl, '', $imgSrc);
-
-                    $imgInfo = $this->file->getPathInfo($imgPath);
-                    $this->optimizeImage($this->filterSrc($imgPath), $imgInfo);
+                    $imgInfo = $this->file->getPathInfo($imgAbsPath);
+                    $placeHolderPath =  $this->directory->getPath('pub') . '/' . $this->moveImgTo . $imgInfo['basename'];
+                    if (!$this->file->fileExists($placeHolderPath)) {
+                        $this->optimizeImage($imgAbsPath, $imgInfo);
+                    }
                     $placeHolder = $this->helperImage->getBaseMediaUrl()
                         . '/mageplaza/lazyloading/'
                         . $imgInfo['basename'];
@@ -138,7 +152,6 @@ class Filter
                 } else {
                     $newClass = str_replace('<img', '<img class="' . $class . '"', $img);
                 }
-
                 $strProcess = str_replace('src="', 'src="' . $placeHolder . '" data-src="', $newClass);
 
                 if (!$this->helperData->isExcludeClass($this->getImageClass($strProcess))) {

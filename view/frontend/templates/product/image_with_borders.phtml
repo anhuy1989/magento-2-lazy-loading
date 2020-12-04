@@ -40,7 +40,7 @@
                   style="padding-bottom: <?= /* @escapeNotVerified */ ($block->getRatio() * 100) ?>%;">
                 <img class="product-image-photo mplazyload mplazyload-icon"
                     <?= /** @noEscape */ $block->getCustomAttributes() ?>
-                     src="<?= /** @noEscape */ $block->getIcon() ?>"
+                     src="<?= /** @noEscape */ $block->getImageUrl() ?>"
                      width="<?= /** @noEscape */ $block->getWidth() ?>"
                      height="<?= /** @noEscape */ $block->getHeight() ?>"
                      alt="<?= /** @noEscape */ $block->stripTags($block->getLabel(), null, true) ?>"/>

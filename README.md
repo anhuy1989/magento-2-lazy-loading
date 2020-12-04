@@ -35,7 +35,7 @@ Install via composer (recommend). Run the following command in Magento 2 root fo
 
 ```
 composer config repositories.magento2-lazy-loading git "https://github.com/anhuy1989/magento-2-lazy-loading"
-composer require fidesio/module-lazy-loading:dev-master
+composer require fidesio/module-lazy-loading
 php bin/magento setup:upgrade
 php bin/magento setup:static-content:deploy
 ```
